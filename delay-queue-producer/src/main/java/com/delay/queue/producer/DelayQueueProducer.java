@@ -5,6 +5,8 @@ import com.delay.queue.DelayQueueJob;
 import com.delay.queue.api.DelayQueueProducerApi;
 import com.delay.queue.common.constants.RedisConstants;
 import com.delay.queue.common.utils.StringUtil;
+import com.delay.queue.consumer.handler.DelayBucketHandler;
+import com.delay.queue.consumer.init.StartupInit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -39,6 +41,11 @@ public class DelayQueueProducer implements DelayQueueProducerApi {
          */
         String delayBucketKey = StringUtil.getDelayBucketKey(queueId);
         stringRedisTemplate.opsForZSet().add(delayBucketKey, queueId, delayTime);
+        /**
+         * 唤醒延迟消息触发处理
+         */
+        DelayBucketHandler delayBucketHandler = StartupInit.delayBucketHandlerMap.get(delayBucketKey);
+        delayBucketHandler.getDelayBucketExecuter().singal();
         return true;
     }
 }

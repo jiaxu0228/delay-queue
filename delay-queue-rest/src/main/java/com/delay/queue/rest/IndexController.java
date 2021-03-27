@@ -12,6 +12,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.UUID;
+
 /**
  * @description: TODO
  * @author: 贾诩
@@ -41,10 +43,11 @@ public class IndexController {
     @RequestMapping("/send")
     public String send() {
         DelayQueueJob delayQueueJob = DelayQueueJob.builder().
-                queueId("123456")
+                queueId(UUID.randomUUID().toString().replace("-", ""))
                 .topic("test")
                 .message("content")
-                .delayTime(1000 * 60 * 10L)
+                .delayTime(1000 * 10)
+                .createTime(System.currentTimeMillis())
                 .build();
         delayQueueProducerApi.produceDelayMessage(delayQueueJob);
         return "success";
