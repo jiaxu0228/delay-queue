@@ -3,6 +3,7 @@ package com.delay.queue.rest;
 import com.delay.queue.DelayQueueJob;
 import com.delay.queue.api.DelayQueueProducerApi;
 import com.delay.queue.producer.DelayQueueProducer;
+import com.delay.queue.producer.tasktest.Task;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,9 @@ public class IndexController {
     @Autowired
     private DelayQueueProducerApi delayQueueProducerApi;
 
+    @Autowired
+    private Task task;
+
     @RequestMapping("main")
     public String index() {
         log.debug("进入main方法");
@@ -43,6 +47,12 @@ public class IndexController {
                 .delayTime(1000 * 60 * 10L)
                 .build();
         delayQueueProducerApi.produceDelayMessage(delayQueueJob);
+        return "success";
+    }
+
+    @RequestMapping("/executeTask")
+    public String executeTask() {
+        task.doTaskOne();
         return "success";
     }
 }
