@@ -43,7 +43,7 @@ public class DelayQueueJob implements Serializable {
      */
     private int failCount = 0;
     /**
-     * 优先级 优先级越高越先触发执行
+     * 优先级 优先级越低越先触发执行
      */
     private int priority = 0;
     /**

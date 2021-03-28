@@ -43,20 +43,23 @@ public class IndexController {
 
     @RequestMapping("/send")
     public String send() {
+        long now = System.currentTimeMillis();
         DelayQueueJob delayQueueJob = DelayQueueJob.builder().
                 queueId(UUID.randomUUID().toString().replace("-", ""))
                 .topic(TopicConstants.ORDER_CANCE)
-                .message("content")
+                .message("content0")
                 .delayTime(1000 * 5)
-                .createTime(System.currentTimeMillis())
+                .createTime(now)
+                .priority(8)
                 .build();
         delayQueueProducerApi.produceDelayMessage(delayQueueJob);
         DelayQueueJob delayQueueJob2 = DelayQueueJob.builder().
                 queueId(UUID.randomUUID().toString().replace("-", ""))
                 .topic(TopicConstants.LOGIN)
-                .message("content")
-                .delayTime(1000 * 10)
-                .createTime(System.currentTimeMillis())
+                .message("content1")
+                .delayTime(1000 * 5)
+                .createTime(now)
+                .priority(2)
                 .build();
         delayQueueProducerApi.produceDelayMessage(delayQueueJob2);
         return "success";

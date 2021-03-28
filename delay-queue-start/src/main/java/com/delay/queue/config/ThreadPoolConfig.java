@@ -1,5 +1,6 @@
 package com.delay.queue.config;
 
+import com.delay.queue.consumer.handler.DelayQueueRejectHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -27,7 +28,7 @@ public class ThreadPoolConfig {
         // 当线程池没有处理能力的时候，该策略会直接在 execute 方法的调用线程中运行被拒绝的任务；
         // 如果执行程序已关闭，则会丢弃该任务
         executor.setThreadNamePrefix("delayQueueExecutor-");
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setRejectedExecutionHandler(new DelayQueueRejectHandler());
         return executor;
     }
 }

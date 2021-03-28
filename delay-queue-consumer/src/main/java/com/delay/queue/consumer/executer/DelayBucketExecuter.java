@@ -10,12 +10,14 @@ import com.delay.queue.consumer.factory.DelayQueueConsumerFactory;
 import com.delay.queue.consumer.strategy.DelayQueueStrategy;
 import com.lmax.disruptor.EventTranslatorOneArg;
 import com.lmax.disruptor.RingBuffer;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
+import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -29,6 +31,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Component
 @Scope("prototype")
+@Slf4j
 public class DelayBucketExecuter {
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
@@ -100,7 +103,20 @@ public class DelayBucketExecuter {
                     condition.await(delayTime - now, TimeUnit.MILLISECONDS);
                     continue;
                 }
-                consume(delayQueueJob);
+                Boolean redisLock = false;
+                try {
+                    redisLock = stringRedisTemplate.opsForValue().setIfAbsent(RedisConstants.LOCK + queueId, "1", Duration.ofSeconds(10));
+                    if (redisLock) {
+                        DelayQueueJob newDelayQueueJob = getDelayQueueJob(queueId);
+                        if (newDelayQueueJob != null && newDelayQueueJob.getDelayTime() == delayQueueJob.getDelayTime()) {
+                            consume(delayQueueJob);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    stringRedisTemplate.delete(RedisConstants.LOCK + queueId);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
@@ -118,15 +134,28 @@ public class DelayBucketExecuter {
      */
     private void consume(DelayQueueJob delayQueueJob) {
         String queueId = delayQueueJob.getQueueId();
-        stringRedisTemplate.opsForHash().delete(RedisConstants.DELAY_QUEUE_JOBPOOL_KEY, queueId);
-        stringRedisTemplate.opsForZSet().remove(delayBuckeyKey, queueId);
-        RingBuffer<DisruptorEvent<DelayQueueJob>> ringBuffer = disruptorManager.getDisruptor().getRingBuffer();
-        ringBuffer.publishEvent(new EventTranslatorOneArg<DisruptorEvent<DelayQueueJob>, DelayQueueJob>() {
-            @Override
-            public void translateTo(DisruptorEvent<DelayQueueJob> delayQueueJobDisruptorEvent, long l, DelayQueueJob delayQueueJob) {
-                delayQueueJobDisruptorEvent.setT(delayQueueJob);
-            }
-        }, delayQueueJob);
+        int failCount = delayQueueJob.getFailCount();
+        int retryCount = delayQueueJob.getRetryCount();
+        if (retryCount >= failCount) {
+            failCount = failCount + 1;
+            long delayTime = delayQueueJob.getDelayTime();
+            delayTime = delayTime + 600000 * 2 ^ failCount;
+            delayQueueJob.setDelayTime(delayTime);
+            stringRedisTemplate.opsForHash().put(RedisConstants.DELAY_QUEUE_JOBPOOL_KEY, queueId, JSON.toJSONString(delayQueueJob));
+            stringRedisTemplate.opsForZSet().add(StringUtil.getDelayBucketKey(queueId), queueId, delayTime);
+            RingBuffer<DisruptorEvent<DelayQueueJob>> ringBuffer = disruptorManager.getDisruptor().getRingBuffer();
+            ringBuffer.publishEvent(new EventTranslatorOneArg<DisruptorEvent<DelayQueueJob>, DelayQueueJob>() {
+                @Override
+                public void translateTo(DisruptorEvent<DelayQueueJob> delayQueueJobDisruptorEvent, long l, DelayQueueJob delayQueueJob) {
+                    delayQueueJobDisruptorEvent.setT(delayQueueJob);
+                }
+            }, delayQueueJob);
+        } else {
+            stringRedisTemplate.opsForHash().delete(RedisConstants.DELAY_QUEUE_JOBPOOL_KEY, queueId);
+            stringRedisTemplate.opsForZSet().remove(delayBuckeyKey, queueId);
+            log.error("延迟消息失败：" + failCount + "次");
+        }
+
     }
 
     /**

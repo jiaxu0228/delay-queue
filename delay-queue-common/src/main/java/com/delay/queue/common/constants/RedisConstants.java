@@ -18,4 +18,9 @@ public interface RedisConstants {
      * JOBPOOL key
      */
     public static final String DELAY_QUEUE_JOBPOOL_KEY = "DELAY_QUEUE_JOBPOOL";
+
+    /**
+     * Redis Lock
+     */
+    public static final String LOCK = "LOCK_";
 }

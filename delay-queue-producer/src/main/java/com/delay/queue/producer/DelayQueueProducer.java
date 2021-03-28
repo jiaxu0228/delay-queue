@@ -40,7 +40,8 @@ public class DelayQueueProducer implements DelayQueueProducerApi {
          * 将消息添加至Delay Bucket，用于延迟扫描
          */
         String delayBucketKey = StringUtil.getDelayBucketKey(queueId);
-        stringRedisTemplate.opsForZSet().add(delayBucketKey, queueId, delayTime);
+        stringRedisTemplate.opsForZSet().add(delayBucketKey, queueId, Double.parseDouble(StringUtil.concat(
+                delayTime, ".", delayQueueJob.getPriority())));
         /**
          * 唤醒延迟消息触发处理
          */
