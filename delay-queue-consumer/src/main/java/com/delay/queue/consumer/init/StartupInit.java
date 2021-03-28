@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
  * @date: 2021/3/28 19:47
  */
 @Component
-@Order(0)
+@Order(1)
 public class StartupInit implements CommandLineRunner {
 
     private ExecutorService executorService = Executors.newFixedThreadPool(RedisConstants.DELAY_BUCKET_NUM);
