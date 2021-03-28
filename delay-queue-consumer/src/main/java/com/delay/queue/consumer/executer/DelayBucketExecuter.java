@@ -4,6 +4,8 @@ import com.alibaba.fastjson.JSON;
 import com.delay.queue.DelayQueueJob;
 import com.delay.queue.common.constants.RedisConstants;
 import com.delay.queue.common.utils.StringUtil;
+import com.delay.queue.consumer.factory.DelayQueueConsumerFactory;
+import com.delay.queue.consumer.strategy.DelayQueueStrategy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -26,6 +28,9 @@ import java.util.concurrent.locks.ReentrantLock;
 public class DelayBucketExecuter {
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    private DelayQueueConsumerFactory delayQueueConsumerFactory;
 
     private Lock lock = new ReentrantLock();
     private Condition condition = lock.newCondition();
@@ -108,8 +113,10 @@ public class DelayBucketExecuter {
         String queueId = delayQueueJob.getQueueId();
         stringRedisTemplate.opsForHash().delete(RedisConstants.DELAY_QUEUE_JOBPOOL_KEY, queueId);
         stringRedisTemplate.opsForZSet().remove(delayBuckeyKey, queueId);
-        //TODO 消费处理
-        System.out.println(JSON.toJSONString("消息消费触发：" + delayQueueJob));
+        DelayQueueStrategy delayQueueStrategy = delayQueueConsumerFactory.getStrategyInstance(delayQueueJob.getTopic());
+        if (delayQueueStrategy != null) {
+            delayQueueStrategy.consume(delayQueueJob);
+        }
     }
 
     /**

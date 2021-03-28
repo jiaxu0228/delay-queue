@@ -2,6 +2,7 @@ package com.delay.queue.rest;
 
 import com.delay.queue.DelayQueueJob;
 import com.delay.queue.api.DelayQueueProducerApi;
+import com.delay.queue.common.constants.TopicConstants;
 import com.delay.queue.producer.DelayQueueProducer;
 import com.delay.queue.producer.tasktest.Task;
 import lombok.extern.slf4j.Slf4j;
@@ -44,12 +45,20 @@ public class IndexController {
     public String send() {
         DelayQueueJob delayQueueJob = DelayQueueJob.builder().
                 queueId(UUID.randomUUID().toString().replace("-", ""))
-                .topic("test")
+                .topic(TopicConstants.ORDER_CANCE)
+                .message("content")
+                .delayTime(1000 * 5)
+                .createTime(System.currentTimeMillis())
+                .build();
+        delayQueueProducerApi.produceDelayMessage(delayQueueJob);
+        DelayQueueJob delayQueueJob2 = DelayQueueJob.builder().
+                queueId(UUID.randomUUID().toString().replace("-", ""))
+                .topic(TopicConstants.LOGIN)
                 .message("content")
                 .delayTime(1000 * 10)
                 .createTime(System.currentTimeMillis())
                 .build();
-        delayQueueProducerApi.produceDelayMessage(delayQueueJob);
+        delayQueueProducerApi.produceDelayMessage(delayQueueJob2);
         return "success";
     }
 
